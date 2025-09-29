@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Krishna License Management - Admin Panel Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .btn {
+            @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+        }
+        .btn-primary {
+            @apply bg-blue-600 text-white hover:bg-blue-700;
+        }
+        .btn-secondary {
+            @apply bg-gray-200 text-gray-900 hover:bg-gray-300;
+        }
+        .btn-danger {
+            @apply bg-red-600 text-white hover:bg-red-700;
+        }
+        .btn-sm {
+            @apply h-8 px-3 text-xs;
+        }
+        .btn-md {
+            @apply h-10 px-4 py-2;
+        }
+        .input {
+            @apply flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+        }
+        .card {
+            @apply rounded-lg border border-gray-200 bg-white shadow-sm;
+        }
+        .card-header {
+            @apply flex flex-col space-y-1.5 p-6;
+        }
+        .card-content {
+            @apply p-6 pt-0;
+        }
+        .badge {
+            @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+        }
+        .badge-success {
+            @apply bg-green-100 text-green-800;
+        }
+        .badge-warning {
+            @apply bg-yellow-100 text-yellow-800;
+        }
+        .badge-danger {
+            @apply bg-red-100 text-red-800;
+        }
+        .badge-info {
+            @apply bg-blue-100 text-blue-800;
+        }
+        .badge-gray {
+            @apply bg-gray-100 text-gray-800;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Login Page -->
+    <div id="loginPage" class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div>
+                <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+                    <i data-lucide="lock" class="h-6 w-6 text-blue-600"></i>
+                </div>
+                <h2 class="mt-6 text-center text-3xl font-bold text-gray-900">
+                    Admin Login
+                </h2>
+                <p class="mt-2 text-center text-sm text-gray-600">
+                    Krishna License Management System
+                </p>
+            </div>
+            
+            <form class="mt-8 space-y-6" onsubmit="handleLogin(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">
+                            Email Address
+                        </label>
+                        <div class="mt-1 relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i data-lucide="mail" class="h-5 w-5 text-gray-400"></i>
+                            </div>
+                            <input
+                                id="email"
+                                type="email"
+                                class="input pl-10"
+                                placeholder="admin@example.com"
+                                value="admin@example.com"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">
+                            Password
+                        </label>
+                        <div class="mt-1 relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i data-lucide="lock" class="h-5 w-5 text-gray-400"></i>
+                            </div>
+                            <input
+                                id="password"
+                                type="password"
+                                class="input pl-10"
+                                placeholder="Enter your password"
+                                value="admin123"
+                                required
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <button
+                        type="submit"
+                        class="btn btn-primary btn-lg w-full"
+                    >
+                        Sign in
+                    </button>
+                </div>
+
+                <div class="text-center">
+                    <p class="text-sm text-gray-600">
+                        Default admin credentials:
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Email: admin@example.com<br />
+                        Password: admin123
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboardPage" class="hidden">
+        <!-- Sidebar -->
+        <div class="h-screen flex overflow-hidden bg-gray-100">
+            <div class="hidden md:flex md:flex-shrink-0">
+                <div class="flex flex-col w-64">
+                    <div class="flex flex-col h-0 flex-1">
+                        <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+                            <div class="flex items-center flex-shrink-0 px-4">
+                                <h1 class="text-xl font-bold text-gray-900">License Admin</h1>
+                            </div>
+                            <nav class="mt-5 flex-1 px-2 space-y-1">
+                                <a href="#" onclick="showPage('dashboard')" class="bg-blue-100 text-blue-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                                    <i data-lucide="layout-dashboard" class="mr-3 h-6 w-6"></i>
+                                    Dashboard
+                                </a>
+                                <a href="#" onclick="showPage('packs')" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                                    <i data-lucide="package" class="mr-3 h-6 w-6"></i>
+                                    Subscription Packs
+                                </a>
+                                <a href="#" onclick="showPage('customers')" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                                    <i data-lucide="users" class="mr-3 h-6 w-6"></i>
+                                    Customers
+                                </a>
+                                <a href="#" onclick="showPage('subscriptions')" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md">
+                                    <i data-lucide="file-text" class="mr-3 h-6 w-6"></i>
+                                    Subscriptions
+                                </a>
+                            </nav>
+                        </div>
+                        <div class="flex-shrink-0 flex border-t border-gray-200 p-4">
+                            <div class="flex-shrink-0 w-full group block">
+                                <div class="flex items-center">
+                                    <div class="ml-3">
+                                        <p class="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                                            Admin User
+                                        </p>
+                                        <p class="text-xs font-medium text-gray-500 group-hover:text-gray-700">
+                                            admin@example.com
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main content -->
+            <div class="flex flex-col w-0 flex-1 overflow-hidden">
+                <!-- Top bar -->
+                <div class="relative z-10 flex-shrink-0 flex h-16 bg-white shadow">
+                    <div class="flex-1 px-4 flex justify-between">
+                        <div class="flex-1 flex">
+                            <div class="w-full flex md:ml-0">
+                                <div class="relative w-full text-gray-400 focus-within:text-gray-600">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none">
+                                        <i data-lucide="settings" class="h-5 w-5"></i>
+                                    </div>
+                                    <h2 id="pageTitle" class="block w-full pl-8 pr-3 py-2 border-transparent text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent sm:text-sm">
+                                        Dashboard
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ml-4 flex items-center md:ml-6">
+                            <button onclick="logout()" class="btn btn-secondary btn-sm flex items-center">
+                                <i data-lucide="log-out" class="h-4 w-4 mr-2"></i>
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Page content -->
+                <main class="flex-1 relative overflow-y-auto focus:outline-none">
+                    <div class="py-6">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+                            <!-- Dashboard Content -->
+                            <div id="dashboardContent">
+                                <div class="space-y-6">
+                                    <!-- Header -->
+                                    <div>
+                                        <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+                                        <p class="mt-1 text-sm text-gray-500">
+                                            Overview of your license management system
+                                        </p>
+                                    </div>
+
+                                    <!-- Stats -->
+                                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                                        <div class="card">
+                                            <div class="card-content">
+                                                <div class="flex items-center">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="p-3 rounded-md bg-blue-100">
+                                                            <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-5 w-0 flex-1">
+                                                        <dl>
+                                                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                                                Total Customers
+                                                            </dt>
+                                                            <dd class="text-lg font-medium text-gray-900">
+                                                                12
+                                                            </dd>
+                                                        </dl>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="card">
+                                            <div class="card-content">
+                                                <div class="flex items-center">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="p-3 rounded-md bg-green-100">
+                                                            <i data-lucide="package" class="h-6 w-6 text-green-600"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-5 w-0 flex-1">
+                                                        <dl>
+                                                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                                                Subscription Packs
+                                                            </dt>
+                                                            <dd class="text-lg font-medium text-gray-900">
+                                                                5
+                                                            </dd>
+                                                        </dl>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="card">
+                                            <div class="card-content">
+                                                <div class="flex items-center">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="p-3 rounded-md bg-purple-100">
+                                                            <i data-lucide="file-text" class="h-6 w-6 text-purple-600"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-5 w-0 flex-1">
+                                                        <dl>
+                                                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                                                Total Subscriptions
+                                                            </dt>
+                                                            <dd class="text-lg font-medium text-gray-900">
+                                                                28
+                                                            </dd>
+                                                        </dl>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="card">
+                                            <div class="card-content">
+                                                <div class="flex items-center">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="p-3 rounded-md bg-emerald-100">
+                                                            <i data-lucide="check-circle" class="h-6 w-6 text-emerald-600"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-5 w-0 flex-1">
+                                                        <dl>
+                                                            <dt class="text-sm font-medium text-gray-500 truncate">
+                                                                Active Subscriptions
+                                                            </dt>
+                                                            <dd class="text-lg font-medium text-gray-900">
+                                                                18
+                                                            </dd>
+                                                        </dl>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Pending Requests Alert -->
+                                    <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                                        <div class="flex">
+                                            <div class="flex-shrink-0">
+                                                <i data-lucide="clock" class="h-5 w-5 text-yellow-400"></i>
+                                            </div>
+                                            <div class="ml-3">
+                                                <h3 class="text-sm font-medium text-yellow-800">
+                                                    Pending Subscription Requests
+                                                </h3>
+                                                <div class="mt-2 text-sm text-yellow-700">
+                                                    <p>
+                                                        You have 3 subscription requests waiting for approval.
+                                                        <a href="#" onclick="showPage('subscriptions')" class="font-medium underline text-yellow-800 hover:text-yellow-900 ml-1">
+                                                            Review them now
+                                                        </a>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <!-- Recent Subscriptions -->
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h3 class="text-lg font-medium text-gray-900">Recent Subscriptions</h3>
+                                            </div>
+                                            <div class="card-content">
+                                                <div class="flow-root">
+                                                    <ul class="-my-5 divide-y divide-gray-200">
+                                                        <li class="py-4">
+                                                            <div class="flex items-center space-x-4">
+                                                                <div class="flex-shrink-0">
+                                                                    <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                                        <span class="text-sm font-medium text-gray-700">J</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="flex-1 min-w-0">
+                                                                    <p class="text-sm font-medium text-gray-900 truncate">
+                                                                        John Doe
+                                                                    </p>
+                                                                    <p class="text-sm text-gray-500 truncate">
+                                                                        Premium Plan
+                                                                    </p>
+                                                                </div>
+                                                                <div class="flex-shrink-0 text-right">
+                                                                    <span class="badge badge-success">
+                                                                        Active
+                                                                    </span>
+                                                                    <p class="text-xs text-gray-500 mt-1">
+                                                                        Dec 15, 2023
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                        <li class="py-4">
+                                                            <div class="flex items-center space-x-4">
+                                                                <div class="flex-shrink-0">
+                                                                    <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                                        <span class="text-sm font-medium text-gray-700">S</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="flex-1 min-w-0">
+                                                                    <p class="text-sm font-medium text-gray-900 truncate">
+                                                                        Sarah Wilson
+                                                                    </p>
+                                                                    <p class="text-sm text-gray-500 truncate">
+                                                                        Basic Plan
+                                                                    </p>
+                                                                </div>
+                                                                <div class="flex-shrink-0 text-right">
+                                                                    <span class="badge badge-warning">
+                                                                        Requested
+                                                                    </span>
+                                                                    <p class="text-xs text-gray-500 mt-1">
+                                                                        Dec 14, 2023
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Subscription Packs Overview -->
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h3 class="text-lg font-medium text-gray-900">Subscription Packs</h3>
+                                            </div>
+                                            <div class="card-content">
+                                                <div class="flow-root">
+                                                    <ul class="-my-5 divide-y divide-gray-200">
+                                                        <li class="py-4">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="flex-1 min-w-0">
+                                                                    <p class="text-sm font-medium text-gray-900 truncate">
+                                                                        Premium Plan
+                                                                    </p>
+                                                                    <p class="text-sm text-gray-500 truncate">
+                                                                        Advanced features and priority support
+                                                                    </p>
+                                                                </div>
+                                                                <div class="flex-shrink-0 text-right">
+                                                                    <p class="text-sm font-medium text-gray-900">
+                                                                        $29.99
+                                                                    </p>
+                                                                    <p class="text-xs text-gray-500">
+                                                                        6 months
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                        <li class="py-4">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="flex-1 min-w-0">
+                                                                    <p class="text-sm font-medium text-gray-900 truncate">
+                                                                        Basic Plan
+                                                                    </p>
+                                                                    <p class="text-sm text-gray-500 truncate">
+                                                                        Essential features for small teams
+                                                                    </p>
+                                                                </div>
+                                                                <div class="flex-shrink-0 text-right">
+                                                                    <p class="text-sm font-medium text-gray-900">
+                                                                        $9.99
+                                                                    </p>
+                                                                    <p class="text-xs text-gray-500">
+                                                                        3 months
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Other page contents would go here -->
+                            <div id="packsContent" class="hidden">
+                                <h1 class="text-2xl font-bold text-gray-900">Subscription Packs</h1>
+                                <p class="mt-1 text-sm text-gray-500">Manage subscription plans and pricing</p>
+                            </div>
+
+                            <div id="customersContent" class="hidden">
+                                <h1 class="text-2xl font-bold text-gray-900">Customers</h1>
+                                <p class="mt-1 text-sm text-gray-500">Manage customer accounts and profiles</p>
+                            </div>
+
+                            <div id="subscriptionsContent" class="hidden">
+                                <h1 class="text-2xl font-bold text-gray-900">Subscriptions</h1>
+                                <p class="mt-1 text-sm text-gray-500">Manage subscription requests and assignments</p>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (email === 'admin@example.com' && password === 'admin123') {
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('dashboardPage').classList.remove('hidden');
+            } else {
+                alert('Invalid credentials. Use admin@example.com / admin123');
+            }
+        }
+
+        function logout() {
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('dashboardPage').classList.add('hidden');
+            document.getElementById('email').value = 'admin@example.com';
+            document.getElementById('password').value = 'admin123';
+        }
+
+        function showPage(page) {
+            // Hide all content
+            document.getElementById('dashboardContent').classList.add('hidden');
+            document.getElementById('packsContent').classList.add('hidden');
+            document.getElementById('customersContent').classList.add('hidden');
+            document.getElementById('subscriptionsContent').classList.add('hidden');
+            
+            // Show selected content
+            document.getElementById(page + 'Content').classList.remove('hidden');
+            
+            // Update page title
+            const titles = {
+                'dashboard': 'Dashboard',
+                'packs': 'Subscription Packs',
+                'customers': 'Customers',
+                'subscriptions': 'Subscriptions'
+            };
+            document.getElementById('pageTitle').textContent = titles[page];
+            
+            // Update navigation
+            const navItems = document.querySelectorAll('nav a');
+            navItems.forEach(item => {
+                item.classList.remove('bg-blue-100', 'text-blue-900');
+                item.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
+            });
+            
+            // Highlight current page
+            const currentNav = document.querySelector(`a[onclick="showPage('${page}')"]`);
+            if (currentNav) {
+                currentNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
+                currentNav.classList.add('bg-blue-100', 'text-blue-900');
+            }
+        }
+    </script>
+</body>
+</html>

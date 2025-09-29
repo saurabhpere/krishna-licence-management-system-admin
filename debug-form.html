@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Form - Subscription Pack Creation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Debug: Subscription Pack Creation</h1>
+        
+        <div class="space-y-6">
+            <!-- Test API Connection -->
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4">1. Test API Connection</h2>
+                <button onclick="testAPI()" class="btn btn-primary btn-md">Test API Connection</button>
+                <div id="apiResult" class="mt-4 p-4 bg-gray-100 rounded hidden">
+                    <pre id="apiOutput" class="text-sm"></pre>
+                </div>
+            </div>
+
+            <!-- Test Login -->
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4">2. Test Admin Login</h2>
+                <button onclick="testLogin()" class="btn btn-primary btn-md">Test Admin Login</button>
+                <div id="loginResult" class="mt-4 p-4 bg-gray-100 rounded hidden">
+                    <pre id="loginOutput" class="text-sm"></pre>
+                </div>
+            </div>
+
+            <!-- Test Create Pack -->
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4">3. Test Create Subscription Pack</h2>
+                <form onsubmit="testCreatePack(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                        <input type="text" id="packName" value="Test Pack" class="input w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <input type="text" id="packDescription" value="Test Description" class="input w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">SKU</label>
+                        <input type="text" id="packSku" value="test-pack-debug" class="input w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                        <input type="number" id="packPrice" value="29.99" step="0.01" class="input w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Validity (months)</label>
+                        <input type="number" id="packValidity" value="6" min="1" max="12" class="input w-full" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-md">Test Create Pack</button>
+                </form>
+                <div id="createResult" class="mt-4 p-4 bg-gray-100 rounded hidden">
+                    <pre id="createOutput" class="text-sm"></pre>
+                </div>
+            </div>
+
+            <!-- Test List Packs -->
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4">4. Test List Subscription Packs</h2>
+                <button onclick="testListPacks()" class="btn btn-primary btn-md">Test List Packs</button>
+                <div id="listResult" class="mt-4 p-4 bg-gray-100 rounded hidden">
+                    <pre id="listOutput" class="text-sm"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        function showResult(elementId, outputId, data) {
+            document.getElementById(elementId).classList.remove('hidden');
+            document.getElementById(outputId).textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function testAPI() {
+            try {
+                const response = await fetch('http://localhost:8080/health');
+                const data = await response.json();
+                showResult('apiResult', 'apiOutput', { success: true, data });
+            } catch (error) {
+                showResult('apiResult', 'apiOutput', { success: false, error: error.message });
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const response = await fetch('http://localhost:8080/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: 'admin@example.com', password: 'admin123' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data && data.data.token) {
+                    authToken = data.data.token;
+                    showResult('loginResult', 'loginOutput', { 
+                        success: true, 
+                        message: 'Login successful! Token saved.',
+                        user: data.data.user 
+                    });
+                } else {
+                    showResult('loginResult', 'loginOutput', data);
+                }
+            } catch (error) {
+                showResult('loginResult', 'loginOutput', { success: false, error: error.message });
+            }
+        }
+
+        async function testCreatePack(event) {
+            event.preventDefault();
+            
+            if (!authToken) {
+                alert('Please login first!');
+                return;
+            }
+            
+            try {
+                const packData = {
+                    name: document.getElementById('packName').value,
+                    description: document.getElementById('packDescription').value,
+                    sku: document.getElementById('packSku').value,
+                    price: parseFloat(document.getElementById('packPrice').value),
+                    validity_months: parseInt(document.getElementById('packValidity').value)
+                };
+                
+                console.log('Sending pack data:', packData);
+                
+                const response = await fetch('http://localhost:8080/api/v1/packs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(packData)
+                });
+                
+                const data = await response.json();
+                console.log('Response:', data);
+                
+                showResult('createResult', 'createOutput', { 
+                    success: response.ok, 
+                    status: response.status,
+                    data 
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                showResult('createResult', 'createOutput', { success: false, error: error.message });
+            }
+        }
+
+        async function testListPacks() {
+            if (!authToken) {
+                alert('Please login first!');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/packs', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                showResult('listResult', 'listOutput', data);
+            } catch (error) {
+                showResult('listResult', 'listOutput', { success: false, error: error.message });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Krishna License Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">API Test - Krishna License Management System</h1>
+        
+        <div class="space-y-6">
+            <!-- Health Check -->
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4">Health Check</h2>
+                <button onclick="testHealth()" class="btn btn-primary btn-md">Test Health Endpoint</button>
+                <div id="healthResult" class="mt-4 p-4 bg-gray-100 rounded hidden">
+                    <pre id="healthOutput" class="text-sm"></pre>
+                </div>
+            </div>
+
+            <!-- Admin Login Test -->
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4">Admin Login Test</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input type="email" id="loginEmail" value="admin@example.com" class="input w-full max-w-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input type="password" id="loginPassword" value="admin123" class="input w-full max-w-md">
+                    </div>
+                    <button onclick="testLogin()" class="btn btn-primary btn-md">Test Admin Login</button>
+                </div>
+                <div id="loginResult" class="mt-4 p-4 bg-gray-100 rounded hidden">
+                    <pre id="loginOutput" class="text-sm"></pre>
+                </div>
+            </div>
+
+            <!-- API Tests with Token -->
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4">Protected API Tests</h2>
+                <p class="text-sm text-gray-600 mb-4">These tests require a valid admin token from the login above.</p>
+                
+                <div class="space-y-4">
+                    <button onclick="testSubscriptionPacks()" class="btn btn-secondary btn-md mr-2">Test Get Subscription Packs</button>
+                    <button onclick="testCustomers()" class="btn btn-secondary btn-md mr-2">Test Get Customers</button>
+                    <button onclick="testSubscriptions()" class="btn btn-secondary btn-md mr-2">Test Get Subscriptions</button>
+                </div>
+                
+                <div id="apiResult" class="mt-4 p-4 bg-gray-100 rounded hidden">
+                    <pre id="apiOutput" class="text-sm"></pre>
+                </div>
+            </div>
+
+            <!-- Create Test Data -->
+            <div class="card p-6">
+                <h2 class="text-xl font-semibold mb-4">Create Test Data</h2>
+                <p class="text-sm text-gray-600 mb-4">Create sample subscription packs and customers for testing.</p>
+                
+                <div class="space-y-4">
+                    <button onclick="createTestPack()" class="btn btn-primary btn-md mr-2">Create Test Subscription Pack</button>
+                    <button onclick="createTestCustomer()" class="btn btn-primary btn-md mr-2">Create Test Customer</button>
+                </div>
+                
+                <div id="createResult" class="mt-4 p-4 bg-gray-100 rounded hidden">
+                    <pre id="createOutput" class="text-sm"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        function showResult(elementId, outputId, data) {
+            document.getElementById(elementId).classList.remove('hidden');
+            document.getElementById(outputId).textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch('http://localhost:8080/health');
+                const data = await response.json();
+                showResult('healthResult', 'healthOutput', data);
+            } catch (error) {
+                showResult('healthResult', 'healthOutput', { error: error.message });
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                
+                const response = await fetch('http://localhost:8080/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data && data.data.token) {
+                    authToken = data.data.token;
+                    showResult('loginResult', 'loginOutput', { 
+                        success: true, 
+                        message: 'Login successful! Token saved for API tests.',
+                        user: data.data.user 
+                    });
+                } else {
+                    showResult('loginResult', 'loginOutput', data);
+                }
+            } catch (error) {
+                showResult('loginResult', 'loginOutput', { error: error.message });
+            }
+        }
+
+        async function testSubscriptionPacks() {
+            if (!authToken) {
+                alert('Please login first to get an auth token');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/packs', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                showResult('apiResult', 'apiOutput', data);
+            } catch (error) {
+                showResult('apiResult', 'apiOutput', { error: error.message });
+            }
+        }
+
+        async function testCustomers() {
+            if (!authToken) {
+                alert('Please login first to get an auth token');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/customers', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                showResult('apiResult', 'apiOutput', data);
+            } catch (error) {
+                showResult('apiResult', 'apiOutput', { error: error.message });
+            }
+        }
+
+        async function testSubscriptions() {
+            if (!authToken) {
+                alert('Please login first to get an auth token');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/subscriptions', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                showResult('apiResult', 'apiOutput', data);
+            } catch (error) {
+                showResult('apiResult', 'apiOutput', { error: error.message });
+            }
+        }
+
+        async function createTestPack() {
+            if (!authToken) {
+                alert('Please login first to get an auth token');
+                return;
+            }
+            
+            try {
+                const testPack = {
+                    name: 'Test Premium Plan',
+                    description: 'A test subscription pack for demonstration',
+                    sku: 'test-premium-' + Date.now(),
+                    price: 29.99,
+                    validity_months: 6
+                };
+                
+                const response = await fetch('http://localhost:8080/api/v1/packs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(testPack)
+                });
+                const data = await response.json();
+                showResult('createResult', 'createOutput', data);
+            } catch (error) {
+                showResult('createResult', 'createOutput', { error: error.message });
+            }
+        }
+
+        async function createTestCustomer() {
+            if (!authToken) {
+                alert('Please login first to get an auth token');
+                return;
+            }
+            
+            try {
+                const testCustomer = {
+                    email: 'test@example.com',
+                    password: 'password123',
+                    name: 'Test Customer',
+                    phone: '+1234567890'
+                };
+                
+                const response = await fetch('http://localhost:8080/api/v1/customers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(testCustomer)
+                });
+                const data = await response.json();
+                showResult('createResult', 'createOutput', data);
+            } catch (error) {
+                showResult('createResult', 'createOutput', { error: error.message });
+            }
+        }
+    </script>
+</body>
+</html>
