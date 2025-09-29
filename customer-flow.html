@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Subscription Flow Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        const API_BASE = 'http://localhost:8080';
+
+        let apiKey = null;          // Customer API key (for SDK/API-Key auth)
+        let adminToken = null;      // Admin JWT token
+
+        function $(id) { return document.getElementById(id); }
+        function show(el) { el.classList.remove('hidden'); }
+        function hide(el) { el.classList.add('hidden'); }
+        function pretty(obj) { return JSON.stringify(obj, null, 2); }
+
+        async function sdkLogin(event) {
+            event?.preventDefault();
+            const email = $('custEmail').value;
+            const password = $('custPassword').value;
+            $('sdkLoginBtn').disabled = true;
+            $('sdkLoginBtn').innerText = 'Logging in...';
+            try {
+                const res = await fetch(`${API_BASE}/sdk/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                show($('sdkLoginResult'));
+                $('sdkLoginOutput').textContent = pretty(data);
+                if (data.success && data.data && data.data.api_key) {
+                    apiKey = data.data.api_key;
+                    $('apiKeyDisplay').textContent = apiKey;
+                    show($('apiKeyBox'));
+                }
+            } catch (err) {
+                show($('sdkLoginResult'));
+                $('sdkLoginOutput').textContent = pretty({ error: err.message });
+            } finally {
+                $('sdkLoginBtn').disabled = false;
+                $('sdkLoginBtn').innerText = 'SDK Login (Customer)';
+            }
+        }
+
+        async function requestSubscription(event) {
+            event?.preventDefault();
+            if (!apiKey) { alert('Please SDK-login as customer first.'); return; }
+            const packId = parseInt($('packId').value, 10);
+            $('requestBtn').disabled = true;
+            $('requestBtn').innerText = 'Requesting...';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/subscriptions/request`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({ pack_id: packId })
+                });
+                const data = await res.json();
+                show($('requestResult'));
+                $('requestOutput').textContent = pretty(data);
+            } catch (err) {
+                show($('requestResult'));
+                $('requestOutput').textContent = pretty({ error: err.message });
+            } finally {
+                $('requestBtn').disabled = false;
+                $('requestBtn').innerText = 'Request Subscription';
+            }
+        }
+
+        async function adminLogin(event) {
+            event?.preventDefault();
+            const email = $('adminEmail').value;
+            const password = $('adminPassword').value;
+            $('adminLoginBtn').disabled = true;
+            $('adminLoginBtn').innerText = 'Logging in...';
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                show($('adminLoginResult'));
+                $('adminLoginOutput').textContent = pretty(data);
+                if (data.success && data.data && data.data.token) {
+                    adminToken = data.data.token;
+                    $('adminTokenDisplay').textContent = adminToken.substring(0, 24) + '...';
+                    show($('adminTokenBox'));
+                }
+            } catch (err) {
+                show($('adminLoginResult'));
+                $('adminLoginOutput').textContent = pretty({ error: err.message });
+            } finally {
+                $('adminLoginBtn').disabled = false;
+                $('adminLoginBtn').innerText = 'Admin Login';
+            }
+        }
+
+        async function loadRequests(event) {
+            event?.preventDefault();
+            if (!adminToken) { alert('Please login as admin first.'); return; }
+            $('loadRequestsBtn').disabled = true;
+            $('loadRequestsBtn').innerText = 'Loading...';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/subscriptions`, {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const data = await res.json();
+                show($('requestsResult'));
+                $('requestsOutput').textContent = pretty(data);
+
+                // Build quick action list
+                const list = $('requestsList');
+                list.innerHTML = '';
+                if (data.success && Array.isArray(data.data)) {
+                    data.data.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'flex items-center justify-between py-2';
+                        li.innerHTML = `<span>#${item.id} - customer:${item.customer_id} pack:${item.pack_id} status:${item.status}</span>`;
+
+                        const btns = document.createElement('div');
+                        const approveBtn = document.createElement('button');
+                        approveBtn.className = 'px-3 py-1 rounded bg-green-600 text-white mr-2';
+                        approveBtn.innerText = 'Approve';
+                        approveBtn.onclick = () => adminApprove(item.id);
+
+                        const assignBtn = document.createElement('button');
+                        assignBtn.className = 'px-3 py-1 rounded bg-emerald-600 text-white mr-2';
+                        assignBtn.innerText = 'Assign';
+                        assignBtn.onclick = () => adminAssign(item.id);
+
+                        const approveAssignBtn = document.createElement('button');
+                        approveAssignBtn.className = 'px-3 py-1 rounded bg-indigo-600 text-white mr-2';
+                        approveAssignBtn.innerText = 'Approve + Assign';
+                        approveAssignBtn.onclick = () => adminApproveAndAssign(item.id);
+
+                        const adminDeactivateBtn = document.createElement('button');
+                        adminDeactivateBtn.className = 'px-3 py-1 rounded bg-yellow-600 text-white mr-2';
+                        adminDeactivateBtn.innerText = 'Deactivate (Admin)';
+                        adminDeactivateBtn.onclick = () => adminDeactivate(item.id);
+
+                        const rejectBtn = document.createElement('button');
+                        rejectBtn.className = 'px-3 py-1 rounded bg-red-600 text-white';
+                        rejectBtn.innerText = 'Reject';
+                        rejectBtn.onclick = () => adminReject(item.id);
+
+                        btns.appendChild(approveBtn);
+                        btns.appendChild(assignBtn);
+                        btns.appendChild(approveAssignBtn);
+                        btns.appendChild(adminDeactivateBtn);
+                        btns.appendChild(rejectBtn);
+                        li.appendChild(btns);
+                        list.appendChild(li);
+                    });
+                }
+                show($('requestsUI'));
+            } catch (err) {
+                show($('requestsResult'));
+                $('requestsOutput').textContent = pretty({ error: err.message });
+            } finally {
+                $('loadRequestsBtn').disabled = false;
+                $('loadRequestsBtn').innerText = 'Load Requests';
+            }
+        }
+
+        async function adminApprove(id) {
+            if (!adminToken) { alert('Please login as admin first.'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/subscriptions/${id}/approve`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const data = await res.json();
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ action: 'approve', id, data });
+            } catch (err) {
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ error: err.message });
+            }
+        }
+
+        async function adminReject(id) {
+            if (!adminToken) { alert('Please login as admin first.'); return; }
+            // For rejection, reusing 'unassign' is not semantically the same. If backend has reject endpoint, use it.
+            // Here we simulate reject by unassigning if status moved beyond requested. Otherwise, just display info.
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/subscriptions/${id}/unassign`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const data = await res.json();
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ action: 'reject', note: 'Using unassign as proxy', id, data });
+            } catch (err) {
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ error: err.message });
+            }
+        }
+
+        async function adminAssign(id) {
+            if (!adminToken) { alert('Please login as admin first.'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/subscriptions/${id}/assign`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const data = await res.json();
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ action: 'assign', id, data });
+            } catch (err) {
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ error: err.message });
+            }
+        }
+
+        async function adminApproveAndAssign(id) {
+            if (!adminToken) { alert('Please login as admin first.'); return; }
+            try {
+                const approveRes = await fetch(`${API_BASE}/api/v1/subscriptions/${id}/approve`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const approveData = await approveRes.json();
+
+                const assignRes = await fetch(`${API_BASE}/api/v1/subscriptions/${id}/assign`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const assignData = await assignRes.json();
+
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ action: 'approve+assign', id, approve: approveData, assign: assignData });
+            } catch (err) {
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ error: err.message });
+            }
+        }
+
+        async function adminDeactivate(id) {
+            if (!adminToken) { alert('Please login as admin first.'); return; }
+            try {
+                // Using unassign endpoint to deactivate from admin side
+                const res = await fetch(`${API_BASE}/api/v1/subscriptions/${id}/unassign`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const data = await res.json();
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ action: 'admin-deactivate', id, data });
+            } catch (err) {
+                show($('adminActionResult'));
+                $('adminActionOutput').textContent = pretty({ error: err.message });
+            }
+        }
+
+        async function customerCheckStatus(event) {
+            event?.preventDefault();
+            if (!apiKey) { alert('Please SDK-login as customer first.'); return; }
+            $('custStatusBtn').disabled = true;
+            $('custStatusBtn').innerText = 'Checking...';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/subscriptions/current`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+                const data = await res.json();
+                show($('customerStatusResult'));
+                $('customerStatusOutput').textContent = pretty(data);
+            } catch (err) {
+                show($('customerStatusResult'));
+                $('customerStatusOutput').textContent = pretty({ error: err.message });
+            } finally {
+                $('custStatusBtn').disabled = false;
+                $('custStatusBtn').innerText = 'Check Customer Status';
+            }
+        }
+
+        async function customerHistory(event) {
+            event?.preventDefault();
+            if (!apiKey) { alert('Please SDK-login as customer first.'); return; }
+            $('custHistoryBtn').disabled = true;
+            $('custHistoryBtn').innerText = 'Loading...';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/subscriptions/my-subscriptions`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+                const data = await res.json();
+                show($('customerHistoryResult'));
+                $('customerHistoryOutput').textContent = pretty(data);
+            } catch (err) {
+                show($('customerHistoryResult'));
+                $('customerHistoryOutput').textContent = pretty({ error: err.message });
+            } finally {
+                $('custHistoryBtn').disabled = false;
+                $('custHistoryBtn').innerText = 'Load Customer History';
+            }
+        }
+
+        async function customerDeactivate(event) {
+            event?.preventDefault();
+            if (!apiKey) { alert('Please SDK-login as customer first.'); return; }
+            $('custDeactivateBtn').disabled = true;
+            $('custDeactivateBtn').innerText = 'Deactivating...';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/subscriptions/deactivate`, {
+                    method: 'PUT',
+                    headers: { 'X-API-Key': apiKey }
+                });
+                const data = await res.json();
+                show($('customerStatusResult'));
+                $('customerStatusOutput').textContent = pretty({ action: 'customer-deactivate', data });
+            } catch (err) {
+                show($('customerStatusResult'));
+                $('customerStatusOutput').textContent = pretty({ error: err.message });
+            } finally {
+                $('custDeactivateBtn').disabled = false;
+                $('custDeactivateBtn').innerText = 'Deactivate (Customer)';
+            }
+        }
+    </script>
+    <style>
+        .card { @apply bg-white rounded shadow p-6; }
+        .input { @apply border border-gray-300 rounded px-3 py-2 w-full; }
+        .btn { @apply rounded px-4 py-2 font-medium; }
+        .btn-primary { @apply bg-blue-600 text-white; }
+        .btn-secondary { @apply bg-gray-200 text-gray-900; }
+    </style>
+    <!-- Tailwind @apply in inline style may not work in all environments; classes are also applied directly on elements below. -->
+</head>
+<body class="bg-gray-50 p-6">
+    <div class="max-w-5xl mx-auto space-y-8">
+        <h1 class="text-3xl font-bold">Customer Subscription Flow Test</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card space-y-4">
+                <h2 class="text-xl font-semibold">1) SDK Login (Customer)</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm text-gray-700">Email</label>
+                        <input id="custEmail" class="input" type="email" value="customer@example.com" placeholder="customer@example.com">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-700">Password</label>
+                        <input id="custPassword" class="input" type="password" value="password123" placeholder="password123">
+                    </div>
+                    <button id="sdkLoginBtn" class="btn btn-primary" onclick="sdkLogin(event)">SDK Login (Customer)</button>
+                </div>
+                <div id="apiKeyBox" class="mt-3 hidden">
+                    <div class="text-sm text-gray-600">API Key:</div>
+                    <code id="apiKeyDisplay" class="text-xs break-all"></code>
+                </div>
+                <div id="sdkLoginResult" class="mt-4 hidden">
+                    <pre id="sdkLoginOutput" class="text-xs bg-gray-100 p-3 rounded"></pre>
+                </div>
+            </div>
+
+            <div class="card space-y-4">
+                <h2 class="text-xl font-semibold">2) Request Subscription (Customer)</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm text-gray-700">Pack ID</label>
+                        <input id="packId" class="input" type="number" value="1" min="1">
+                    </div>
+                    <button id="requestBtn" class="btn btn-primary" onclick="requestSubscription(event)">Request Subscription</button>
+                </div>
+                <div id="requestResult" class="mt-4 hidden">
+                    <pre id="requestOutput" class="text-xs bg-gray-100 p-3 rounded"></pre>
+                </div>
+            </div>
+
+            <div class="card space-y-4">
+                <h2 class="text-xl font-semibold">3) Admin Login</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm text-gray-700">Email</label>
+                        <input id="adminEmail" class="input" type="email" value="admin@example.com">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-700">Password</label>
+                        <input id="adminPassword" class="input" type="password" value="admin123">
+                    </div>
+                    <button id="adminLoginBtn" class="btn btn-primary" onclick="adminLogin(event)">Admin Login</button>
+                </div>
+                <div id="adminTokenBox" class="mt-3 hidden">
+                    <div class="text-sm text-gray-600">Admin Token:</div>
+                    <code id="adminTokenDisplay" class="text-xs break-all"></code>
+                </div>
+                <div id="adminLoginResult" class="mt-4 hidden">
+                    <pre id="adminLoginOutput" class="text-xs bg-gray-100 p-3 rounded"></pre>
+                </div>
+            </div>
+
+            <div class="card space-y-4">
+                <h2 class="text-xl font-semibold">4) Load Requests & Approve/Reject (Admin)</h2>
+                <div class="space-y-3">
+                    <button id="loadRequestsBtn" class="btn btn-secondary" onclick="loadRequests(event)">Load Requests</button>
+                </div>
+                <div id="requestsUI" class="hidden mt-4">
+                    <ul id="requestsList" class="divide-y divide-gray-200"></ul>
+                </div>
+                <div id="requestsResult" class="mt-4 hidden">
+                    <pre id="requestsOutput" class="text-xs bg-gray-100 p-3 rounded"></pre>
+                </div>
+                <div id="adminActionResult" class="mt-4 hidden">
+                    <pre id="adminActionOutput" class="text-xs bg-gray-100 p-3 rounded"></pre>
+                </div>
+            </div>
+
+            <div class="card space-y-4">
+                <h2 class="text-xl font-semibold">5) Customer Checks Status</h2>
+                <div class="space-y-3">
+                    <button id="custStatusBtn" class="btn btn-secondary" onclick="customerCheckStatus(event)">Check Customer Status</button>
+                    <button id="custHistoryBtn" class="btn btn-secondary" onclick="customerHistory(event)">Load Customer History</button>
+                    <button id="custDeactivateBtn" class="btn btn-secondary" onclick="customerDeactivate(event)">Deactivate (Customer)</button>
+                </div>
+                <div id="customerStatusResult" class="mt-4 hidden">
+                    <pre id="customerStatusOutput" class="text-xs bg-gray-100 p-3 rounded"></pre>
+                </div>
+                <div id="customerHistoryResult" class="mt-4 hidden">
+                    <pre id="customerHistoryOutput" class="text-xs bg-gray-100 p-3 rounded"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
